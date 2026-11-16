@@ -33,3 +33,7 @@
   clientsecret=password 
   tenantid 
   subscriptionid 
+#lets create the resource 
+terraform apply
+###which will ask for yes it will accept only yes
+##3once crated go to azure portal search for resource group 
