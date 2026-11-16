@@ -37,3 +37,18 @@
 terraform apply
 ###which will ask for yes it will accept only yes
 ##3once crated go to azure portal search for resource group 
+
+#create a new file vnet.tf copy from line 42 till 48
+resource "azurerm_virtual_network" "vnet" {
+  name                = "gopal-terraform-vnet"
+  location            = azurerm_resource_group.myrg.location
+  resource_group_name = azurerm_resource_group.myrg.name
+  address_space       = ["10.0.0.0/16"]
+  
+}
+
+####then in terminal do
+terraform validate 
+terraform plan
+terraform apply
+####once applied complete go to azure portal inside your resource group u will fin the vnet
