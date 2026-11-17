@@ -22,6 +22,17 @@
   address_space       = var.vnet_address_space
 
 }
+#create a new file network.tf copy from line 26 till 34
+variable "vnet_name" {
+  type = string 
+  default = "kyn-vnet"
+}
+
+variable "vnet_address_space" {
+  type = list(string)
+  default = ["10.0.0.0/16"]
+}
+
 
 ###then do terraform apply 
   #exercise 1: once applied complete go to azure portal check that the name of the resource group and vnet name has a prefix of dev-it
