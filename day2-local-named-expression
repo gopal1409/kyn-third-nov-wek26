@@ -14,6 +14,6 @@
 
 ##now to resource.tf file at the end before the curly braces end add the below line 
    tags     = local.project_tags
-  #go to network.tf file before the curly braces end add the below line
+  #go to vnet.tf file before the curly braces end add the below line
    tags     = local.project_tags
 ###finally do terraform apply and go to azure portal in resource group and vnet similar tag will be there
