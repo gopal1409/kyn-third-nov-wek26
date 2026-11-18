@@ -64,3 +64,39 @@ resource "azurerm_lb_backend_address_pool" "lb_backend_pool" {
 #then do terraform apply 
 #check that inside your resource group a lb has been created click on the lb you will se frontendip which is the publci ip
 ##expand setting of your lb you will see the bakcend pool click on it is showing empty
+
+#lets create the health probe for the lb inside the same file lb.tf paste the below content from 69 till 98
+resource "azurerm_lb_probe" "lb_health_probe" {
+  loadbalancer_id = azurerm_lb.weblb.id
+  name            = "HealthProbe"
+  protocol        = "Tcp"
+  port            = 80 #in instance port number 80
+  #protocol       = "Http"
+  #path            = "/var/www/html/index.html" #this is the path of the health probe. This is the
+  interval_in_seconds = 30 #every 30 second it will check health of your instance in port 80
+  number_of_probes    = 2 #if any of the instance do not respond in 1 min it will make that instance unhealthy and it will not send traffic to that instance. It will send traffic to the healthy instance.
+}
+
+#rules for the lb
+resource "azurerm_lb_rule" "lb_rule" {
+    loadbalancer_id            = azurerm_lb.weblb.id
+    name                       = "HTTPRule"
+    protocol                   = "Tcp"
+    frontend_port              = 80 #lb frontend port number 80 443
+    backend_port               = 80 #application respond if it is tomcat
+    frontend_ip_configuration_name = azurerm_lb.weblb.frontend_ip_configuration[0].name
+    backend_address_pool_ids    = [azurerm_lb_backend_address_pool.lb_backend_pool.id]
+    probe_id                   = azurerm_lb_probe.lb_health_probe.id
+    }
+
+    ##finally we need attach the nic card behind the pool
+    resource "azurerm_network_interface_backend_address_pool_association" "nic_backend_pool_assoc" {
+        for_each = var.subnets
+  network_interface_id    = azurerm_network_interface.web_nic[each.key].id
+  ip_configuration_name = azurerm_network_interface.web_nic[each.key].ip_configuration[0].name
+  backend_address_pool_id = azurerm_lb_backend_address_pool.lb_backend_pool.id
+}
+
+#then do terraform apply
+###go back to the lb in azure portal now refresh the backend pool you will see two instances 
+##copy the public ip which is there in your console paste it in the browser wiothought httpd you will see the test page of your instance refresh after 30 second the traffic will move to another instance
