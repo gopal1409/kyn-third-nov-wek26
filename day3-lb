@@ -1,0 +1,28 @@
+#first we will disable the public ip go to the file publicip.tf at the starting put /*  and end  */
+  #second we will disable the win-vm.tf file at the starting put /*  and end  */
+  #third we will remove the comment from vm.tf by removing /* from the first line and end line */
+  #fourth we will go to nic.tf file and in ip configuration in front of public ip we will put #
+  #firth we are going to create two instances in map-object-az.tf file delete everything we will add second subnet so that it will create two subnet and two instances copy from line 6 till 25
+  variable "subnets" { #student db
+  description = "configuration for azure subnets"
+  type = map(object({
+    name              = string
+    address_prefix    = list(string)
+    availability_zone = string
+  }))
+  default = {
+    "subnet1" = { #student1
+      name              = "web-subnet-az1"
+      address_prefix    = ["10.0.1.0/24"]
+      availability_zone = "1"
+    }
+    "subnet2" = { #student2
+      name              = "web-subnet-az2"
+      address_prefix    = ["10.0.2.0/24"]
+      availability_zone = "2"
+    }
+  }
+}
+#sixth we will disable the output of public ip go to multi-output.tf file put a /* at the starting and */ at the end 
+  #seventh we will do terraform apply which will create two instances
+  #go to the azure portal go inside your resource group you wills see two instance click on the instances you will see none of the the instance are having public ip
