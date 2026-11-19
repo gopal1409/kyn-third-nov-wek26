@@ -35,6 +35,24 @@ subnets = { #student db
     }
 }
 
+#go to provider.tf delete everything and add this from line 39 till 53
+#####inside provide.tf file delete everthing and add this from line 6 till 38
+terraform {
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "=5.0.0" #important for production environment
+    }
+  }
+}
+
+# Configure the Microsoft Azure Provider
+provider "azurerm" {
+  features {}
+
+}
+
+
 #if you want to overwrite the default value
   terraform plan --var-file=dev.tfvars 
   1. see the planner you will see the default ip address is 10 series change to 172 serier and once instance will be there
@@ -47,4 +65,21 @@ subnets = { #student db
   #this will show in the planner it is going to create but befre that the dev environment to be delete dont apply it just check the planner
 
   
+#go to provider.tf delete everything and add this from line 51 till 65
+#####inside provide.tf file delete everthing and add this from line 6 till 38
+terraform {
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "=5.0.0" #important for production environment
+    }
+  }
+}
+
+# Configure the Microsoft Azure Provider
+provider "azurerm" {
+  features {}
+
+}
+
 
