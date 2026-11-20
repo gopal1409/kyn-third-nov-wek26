@@ -162,3 +162,15 @@ provider "azurerm" {
   terraform init
   terraform plan --var-file=dev.tfvars
   terraform apply --var-file=dev.tfvars
+##to do the same 
+terraform destroy
+##once destroyed
+#delete this files
+.terraform
+terraform.tfstate
+terraform.tfstate.backup
+#inside main.tf file in source it is showing my github link
+##replace it with your own github link
+#in github you have to click on your modules folder inside the modules folder click on networking
+#copy the address from address bar remove the https also need to remove /tree/main
+https://github.com/gopal1409/terraform-module-nov-second26/tree/main/modules/networking
