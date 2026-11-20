@@ -16,3 +16,9 @@
   64 terraform apply --var-file=prod.tfvars --auto-approve        
   #finally go to azure portal and you can see both the environment dev and prod
   in the dev env you will see single machine in prod you will see two vms also check the ip address dev 172 prod 173
+#lets destroy the dev and prod environment
+terraform workspace select dev
+terraform destroy --auto-approve
+terraform workspace select prod
+terraform destroy --auto-approve
+
