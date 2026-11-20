@@ -1,0 +1,420 @@
+You can create an Azure Kubernetes Service (AKS) cluster with multiple worker nodes using Terraform. I recommend creating a cluster with a system node pool and a separate application node pool.
+
+We will use the AzureRM Terraform provider and deploy:
+- AKS Kubernetes cluster.
+- System node pool for Kubernetes system components.
+- User node pool for application workloads.
+- Managed identity.
+- Azure networking.
+- Autoscaling configuration.
+- Terraform outputs for cluster name and credentials.
+1. AKS architecture
+
+
+
+
+
+
+
+
+thomasvanlaere.com
+
+
+Azure Kubernetes Service (AKS)
+
+Managed Kubernetes Control Plane
+
+System Node Pool
+System
+- 2 nodes
+- Standard_D2s_v5
+- CoreDNS
+- Kubernetes system pods
+
+
+User Node Pool
+Application
+- 2 nodes
+- Standard_D2s_v5
+- Application pods
+- Autoscaling
+
+
+
+
+2. Terraform project structure
+terraform-aks/
+│
+├── provider.tf
+├── variables.tf
+├── main.tf
+├── outputs.tf
+└── terraform.tfvars
+
+
+3. provider.tf
+Use AzureRM provider version 5.0.0, consistent with your earlier Azure Terraform exercises.
+terraform {
+  required_version = ">= 1.5.0"
+
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "= 5.0.0"
+    }
+  }
+}
+
+provider "azurerm" {
+  features {}
+}
+
+
+4. variables.tf
+variable "resource_group_name" {
+  description = "Azure resource group name"
+  type        = string
+  default     = "rg-kyn-aks"
+}
+
+variable "location" {
+  description = "Azure region"
+  type        = string
+  default     = "eastus"
+}
+
+variable "aks_cluster_name" {
+  description = "AKS cluster name"
+  type        = string
+  default     = "kyn-aks-cluster"
+}
+
+variable "kubernetes_version" {
+  description = "Kubernetes version; null uses the Azure recommended version"
+  type        = string
+  default     = null
+}
+
+variable "system_node_count" {
+  description = "Initial number of system nodes"
+  type        = number
+  default     = 2
+}
+
+variable "user_node_count" {
+  description = "Initial number of application nodes"
+  type        = number
+  default     = 2
+}
+
+variable "vm_size" {
+  description = "Azure VM size for AKS nodes"
+  type        = string
+  default     = "Standard_D2s_v5"
+}
+
+variable "environment" {
+  type    = string
+  default = "dev"
+}
+
+
+5. main.tf – Create AKS cluster
+This configuration creates the resource group and AKS cluster with a system node pool.
+resource "azurerm_resource_group" "aks_rg" {
+  name     = var.resource_group_name
+  location = var.location
+
+  tags = {
+    Environment = var.environment
+    Project     = "KYN-AKS"
+    ManagedBy   = "Terraform"
+  }
+}
+
+resource "azurerm_kubernetes_cluster" "aks" {
+
+  name                = var.aks_cluster_name
+  location            = azurerm_resource_group.aks_rg.location
+  resource_group_name = azurerm_resource_group.aks_rg.name
+
+  dns_prefix = "kynaks"
+
+  kubernetes_version = var.kubernetes_version
+
+  # Managed identity
+  identity {
+    type = "SystemAssigned"
+  }
+
+  # System node pool
+  default_node_pool {
+    name       = "systempool"
+    vm_size    = var.vm_size
+    node_count = var.system_node_count
+
+    type = "VirtualMachineScaleSets"
+
+    auto_scaling_enabled = true
+    min_count            = 2
+    max_count            = 3
+
+    max_pods = 30
+
+    os_disk_size_gb = 64
+  }
+
+  # Kubernetes networking
+  network_profile {
+    network_plugin    = "azure"
+    load_balancer_sku = "standard"
+  }
+
+  role_based_access_control_enabled = true
+
+  tags = {
+    Environment = var.environment
+    Project     = "KYN-AKS"
+    ManagedBy   = "Terraform"
+  }
+
+  # The cluster autoscaler manages node_count after creation.
+  lifecycle {
+    ignore_changes = [
+      default_node_pool[0].node_count
+    ]
+  }
+}
+
+
+6. Create an additional user node pool
+This is an important concept in AKS. You can create multiple node pools for different workloads.
+
+Add the following resource to main.tf:
+resource "azurerm_kubernetes_cluster_node_pool" "user_pool" {
+
+  name                  = "userpool"
+  kubernetes_cluster_id = azurerm_kubernetes_cluster.aks.id
+
+  vm_size    = var.vm_size
+  node_count = var.user_node_count
+
+  mode = "User"
+
+  auto_scaling_enabled = true
+
+  min_count = 1
+  max_count = 4
+
+  max_pods = 30
+
+  os_disk_size_gb = 64
+
+  tags = {
+    Environment = var.environment
+    NodePool     = "Application"
+  }
+
+  lifecycle {
+    ignore_changes = [
+      node_count
+    ]
+  }
+}
+
+
+Understanding the two node pools
+Property	System pool	User pool
+Name	systempool	userpool
+Initial nodes	2	2
+Minimum nodes	2	1
+Maximum nodes	3	4
+VM size	Standard_D2s_v5	Standard_D2s_v5
+Workload	Kubernetes system components	Application workloads
+Autoscaling	Enabled	Enabled
+
+Initial deployment: 4 nodes
+The cluster starts with four worker nodes in total. Autoscaling can change the number of nodes within the configured limits.
+
+Microsoft recommends at least three system nodes for production workloads; two here is a smaller demonstration configuration. 
+Microsoft Learn+1
+
+7. outputs.tf
+output "resource_group_name" {
+  value = azurerm_resource_group.aks_rg.name
+}
+
+output "aks_cluster_name" {
+  value = azurerm_kubernetes_cluster.aks.name
+}
+
+output "aks_cluster_id" {
+  value = azurerm_kubernetes_cluster.aks.id
+}
+
+output "system_node_pool" {
+  value = azurerm_kubernetes_cluster.aks.default_node_pool[0].name
+}
+
+output "user_node_pool" {
+  value = azurerm_kubernetes_cluster_node_pool.user_pool.name
+}
+
+output "kubernetes_version" {
+  value = azurerm_kubernetes_cluster.aks.kubernetes_version
+}
+
+
+8. terraform.tfvars
+resource_group_name = "rg-kyn-aks"
+
+location = "eastus"
+
+aks_cluster_name = "kyn-aks-cluster"
+
+environment = "dev"
+
+# Leave null to use Azure's recommended Kubernetes version
+kubernetes_version = null
+
+system_node_count = 2
+
+user_node_count = 2
+
+vm_size = "Standard_D2s_v5"
+
+
+9. Deploy AKS using Terraform
+Step 1 – Authenticate to Azure
+az login
+
+az account list --output table
+
+az account set --subscription "<SUBSCRIPTION_ID>"
+
+
+For AzureRM 5.0.0, make the subscription ID available through the ARM_SUBSCRIPTION_ID environment variable if it is not otherwise configured.
+
+PowerShell:
+$env:ARM_SUBSCRIPTION_ID = "<SUBSCRIPTION_ID>"
+
+
+Step 2 – Initialize Terraform
+terraform init
+
+
+Step 3 – Format configuration
+terraform fmt -recursive
+
+
+Step 4 – Validate configuration
+terraform validate
+
+
+Step 5 – Generate execution plan
+terraform plan -var-file="terraform.tfvars" -out="aks.tfplan"
+
+
+Step 6 – Create AKS cluster
+terraform apply aks.tfplan
+
+
+AKS provisioning can take several minutes. Azure will provision the managed control plane and the VM Scale Sets backing the node pools.
+10. Connect to the AKS cluster
+After deployment, retrieve the Kubernetes credentials:
+az aks get-credentials \
+  --resource-group rg-kyn-aks \
+  --name kyn-aks-cluster
+
+
+Check the worker nodes:
+kubectl get nodes -o wide
+
+
+Expected output (illustrative):
+NAME                                STATUS   ROLES
+aks-systempool-xxxxx-vmss000000     Ready    <none>
+aks-systempool-xxxxx-vmss000001     Ready    <none>
+aks-userpool-xxxxx-vmss000000       Ready    <none>
+aks-userpool-xxxxx-vmss000001       Ready    <none>
+
+
+Check node pools:
+az aks nodepool list \
+  --resource-group rg-kyn-aks \
+  --cluster-name kyn-aks-cluster \
+  --output table
+
+
+Check Kubernetes namespaces and pods:
+kubectl get namespaces
+
+kubectl get pods -A
+
+kubectl get nodes --show-labels
+
+
+11. Deploy a sample application
+Once AKS is running, deploy Nginx.
+kubectl create deployment nginx \
+  --image=nginx \
+  --replicas=3
+
+
+Expose the application:
+kubectl expose deployment nginx \
+  --type=LoadBalancer \
+  --port=80
+
+
+Check the service:
+kubectl get services
+
+
+Wait until an external IP is assigned, then access it through your browser.
+12. Understand AKS node autoscaling
+
+
+
+
+
+
+
+
+medium.com
+
+
+There are two different scaling concepts:
+Scaling	What it does
+Horizontal Pod Autoscaler (HPA)	Increases or decreases pod replicas
+Cluster Autoscaler	Increases or decreases worker nodes
+
+For example:
+- Initially: 2 user nodes.
+- Application demand increases.
+- Kubernetes schedules more pods.
+- If existing nodes cannot accommodate them, Cluster Autoscaler can add nodes.
+- The user node pool can scale up to 4 nodes.
+The Terraform configuration enables the Cluster Autoscaler. HPA is a separate Kubernetes configuration that you can deploy later.
+13. Destroy AKS infrastructure
+When the training exercise is complete:
+terraform destroy -var-file="terraform.tfvars"
+
+
+This removes the AKS cluster and its Terraform-managed resource group.
+
+Be aware that this deletes the workloads and infrastructure in the managed cluster. Check for persistent data and other resources before destroying it.
+
+14. Important AKS Terraform concepts to teach
+Terraform resource / property	Concept
+azurerm_kubernetes_cluster	Creates AKS
+default_node_pool	Creates the system node pool
+azurerm_kubernetes_cluster_node_pool	Creates additional node pools
+identity	Managed identity
+network_profile	Kubernetes networking
+auto_scaling_enabled	Enables node autoscaling
+min_count	Minimum worker nodes
+max_count	Maximum worker nodes
+vm_size	Node VM specification
+mode	System or User pool
+lifecycle.ignore_changes	Prevents Terraform from reverting autoscaler-managed node counts
