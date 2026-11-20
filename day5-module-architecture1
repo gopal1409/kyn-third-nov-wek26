@@ -1,4 +1,5 @@
-terraform-azure-infrastructure/
+#create a new folder in your rdp tf-module
+tf-module/
 │
 ├── modules/
 │   ├── networking/
@@ -12,12 +13,14 @@ terraform-azure-infrastructure/
 │   │   ├── outputs.tf
 │   │   └── app.sh
 │   │
-│   ├── security-group/
-│   │   ├── main.tf
-│   │   ├── variables.tf
-│   │   └── outputs.tf
-│   │
 │   └── load-balancer/
 │       ├── main.tf
 │       ├── variables.tf
 │       └── outputs.tf
+
+#once you created the same 
+git init
+git add .
+git commit -m "terraform modules"
+
+##after this create a new repo in github select ssh copy the push command and push the code to repo
