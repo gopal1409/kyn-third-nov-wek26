@@ -24,3 +24,110 @@ git add .
 git commit -m "terraform modules"
 
 ##after this create a new repo in github select ssh copy the push command and push the code to repo
+
+#lets update the networking main.tf varaibles.tf output.tf
+#inside module/networking/varaibles.tf copy paste this code from line 30 till 73
+variable "name_prefix" {
+  type        = string
+  description = "Prefix used for resource names."
+}
+
+variable "resource_group_name" {
+  type        = string
+  description = "Suffix for the resource group name."
+}
+
+variable "location" {
+  type        = string
+  description = "Azure region."
+}
+
+variable "vnet_name" {
+  type        = string
+  description = "VNet name suffix."
+}
+
+variable "vnet_address_space" {
+  type        = list(string)
+  description = "VNet address ranges."
+}
+
+variable "subnet_name" {
+  type        = string
+  description = "Subnet name suffix."
+}
+
+variable "subnet_address_prefixes" {
+  type        = list(string)
+  description = "Subnet address ranges."
+}
+
+variable "ssh_source_address_prefix" {
+  type        = string
+  description = "Source CIDR allowed to connect over SSH."
+}
+
+variable "tags" {
+  type        = map(string)
+  description = "Tags to apply to resources."
+}
+
+#inside modules/networking/output.tf file add this lines from 76 till 99
+output "resource_group_name" {
+  description = "Name of the resource group."
+  value       = azurerm_resource_group.this.name
+}
+
+output "location" {
+  description = "Location of the resource group."
+  value       = azurerm_resource_group.this.location
+}
+
+output "vnet_id" {
+  description = "ID of the virtual network."
+  value       = azurerm_virtual_network.this.id
+}
+
+output "subnet_id" {
+  description = "ID of the subnet used by the VMs."
+  value       = azurerm_subnet.this.id
+}
+
+output "network_security_group_id" {
+  description = "ID of the network security group."
+  value       = azurerm_network_security_group.this.id
+}
+
+#inside modules/networking/main.tf file add this line from 102 till 128
+resource "azurerm_resource_group" "this" {
+  name     = "${var.name_prefix}-${var.resource_group_name}"
+  location = var.location
+  tags     = var.tags
+}
+
+resource "azurerm_virtual_network" "this" {
+  name                = "${var.name_prefix}-${var.vnet_name}"
+  location            = azurerm_resource_group.this.location
+  resource_group_name = azurerm_resource_group.this.name
+  address_space       = var.vnet_address_space
+  tags                = var.tags
+}
+
+resource "azurerm_subnet" "this" {
+  name                 = "${var.name_prefix}-${var.subnet_name}"
+  resource_group_name  = azurerm_resource_group.this.name
+  virtual_network_name = azurerm_virtual_network.this.name
+  address_prefixes     = var.subnet_address_prefixes
+}
+
+resource "azurerm_network_security_group" "this" {
+  name                = "${var.name_prefix}-nsg"
+  location            = azurerm_resource_group.this.location
+  resource_group_name = azurerm_resource_group.this.name
+  tags                = var.tags
+}
+
+##then 
+git add .
+git commit -m "added networking module"
+git push orign --all
