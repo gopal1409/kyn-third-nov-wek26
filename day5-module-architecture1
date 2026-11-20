@@ -1,0 +1,23 @@
+terraform-azure-infrastructure/
+│
+├── modules/
+│   ├── networking/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   │
+│   ├── compute/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   ├── outputs.tf
+│   │   └── app.sh
+│   │
+│   ├── security-group/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   │
+│   └── load-balancer/
+│       ├── main.tf
+│       ├── variables.tf
+│       └── outputs.tf
